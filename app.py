@@ -1,7 +1,5 @@
-import requests
-import datetime
-import re
-import os
+import requests, re, os
+from datetime import datetime
 
 sites = [
     "https://www.lipocorpus.com.br/",
@@ -9,16 +7,29 @@ sites = [
     "https://www.clearbeauty.com.br/"
     ]
 
-def toLogPath(url):
-    return re.sub(r'[^\w_. -]', '_', url) + ".log"
+def logInfo(message): 
+    print(f'{datetime.now().strftime("%d/%m/%Y %H:%M:%S")} info: {message}')
+
+def logError(message): 
+    print(f'{datetime.now().strftime("%d/%m/%Y %H:%M:%S")} error: {message}')
+
+def toPath(url):
+    return "last_status/" + re.sub(r'[^\w_. -]', '_', url) + ".status"
+
+def getLastStatus(url):
+    with open(toPath(url), "r") as f:
+        return str(f.read())
+
+def saveLastStatus(url, status):
+    with open(toPath(url), "w") as f:
+        f.write(status)
 
 for site in sites:
-    if not os.path.isfile(toLogPath(site)):
-        with open(toLogPath(site), "w") as f:
+    if not os.path.isfile(toPath(site)):
+        with open(toPath(site), "w") as f:
             pass
 
 for site in sites:
-    status = ""
     try:
         resp = requests.get(site, timeout=10)
         resp.raise_for_status()
@@ -27,16 +38,8 @@ for site in sites:
     except:
         status = "Down"
 
-    time = str(datetime.datetime.now())
+    if status == getLastStatus(site):
+        continue
 
-    last_status = ""
-    with open(toLogPath(site), "r") as f:
-        for line in f:
-            last_status = str(line.split(";")[-1][:-1])
-
-    if status != last_status:
-    
-        new_line = time + ";" + site + ";" + status + "\n"
-
-        with open(toLogPath(site), "a") as f:
-            f.write(new_line)
+    logInfo(f'site={site} changed to status={status}')
+    saveLastStatus(site, status)
